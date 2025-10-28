@@ -5,7 +5,8 @@
         "EventGameToolkit.Runtime",
         "Unity.InputSystem",
         "Unity.TextMeshPro",
-        "Unity.Cinemachine"
+        "Unity.Cinemachine",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [
         "Editor"
@@ -16,7 +17,7 @@
     "precompiledReferences": [
         "DOTweenEditor.dll"
     ],
-    "autoReferenced": true,
+    "autoReferenced": false,
     "defineConstraints": [],
     "versionDefines": [],
     "noEngineReferences": false
