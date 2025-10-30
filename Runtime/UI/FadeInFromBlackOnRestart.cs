@@ -53,7 +53,8 @@ public class FadeInFromBlackOnRestart : MonoBehaviour
     private void FadeOutFromBlack()
     {
         // Fade from alpha 1 (black) to alpha 0 (transparent) using DOTween
-        imageComponent.DOFade(0f, fadeDuration)
+        Color targetColor = new Color(imageComponent.color.r, imageComponent.color.g, imageComponent.color.b, 0f);
+        DOTween.To(() => imageComponent.color, x => imageComponent.color = x, targetColor, fadeDuration)
             .SetDelay(fadeStartDelay)
             .SetUpdate(true) // Use unscaled time so it works during pause
             .OnComplete(() => onFadeComplete?.Invoke());

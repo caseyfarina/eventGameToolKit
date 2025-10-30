@@ -127,7 +127,8 @@ public class ActionDisplayText : MonoBehaviour
         {
             // Set initial alpha to 0 and fade in
             SetTextVisibility(0f);
-            displaySequence.Append(textComponent.DOFade(originalColor.a, fadeDuration));
+            displaySequence.Append(DOTween.To(() => textComponent.color, x => textComponent.color = x,
+                new Color(originalColor.r, originalColor.g, originalColor.b, originalColor.a), fadeDuration));
         }
         else
         {
@@ -148,7 +149,8 @@ public class ActionDisplayText : MonoBehaviour
         if (useFading)
         {
             // Fade out using DOTween
-            textComponent.DOFade(0f, fadeDuration).OnComplete(() =>
+            DOTween.To(() => textComponent.color, x => textComponent.color = x,
+                new Color(originalColor.r, originalColor.g, originalColor.b, 0f), fadeDuration).OnComplete(() =>
             {
                 // Clear the text content
                 textComponent.text = "";

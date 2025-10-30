@@ -32,7 +32,12 @@ public class CharacterControllerCC : MonoBehaviour
     [Tooltip("Time required to pass before being able to jump again")]
     [SerializeField] private float jumpTimeout = 0.5f;
     [SerializeField] private float groundCheckDistance = 0.1f;
-    [SerializeField] private LayerMask groundLayer = 1;
+
+    [Header("⚠️ IMPORTANT: Create a layer named 'Ground' (Edit > Project Settings > Tags and Layers)")]
+    [Space(-20)]
+    [Header("Then select ONLY 'Ground' in the dropdown below. Spelling and capitalization matter!")]
+    [Tooltip("Layer(s) to detect as ground. Create a 'Ground' layer in your project and assign it here.")]
+    [SerializeField] private LayerMask groundLayer = ~0; // Default to "Everything" until students configure
 
     [Header("Dodge Settings")]
     [SerializeField] private float dodgeDistance = 5f;
@@ -146,6 +151,9 @@ public class CharacterControllerCC : MonoBehaviour
     private int _animIDVerticalVelocity;
     private int _animIDIsDodging;
     private int _animIDIsWalking;
+
+    // Animation state tracking (prevents unnecessary updates)
+    private bool _lastAnimatorGroundedState;
 
     private void Start()
     {
@@ -729,8 +737,13 @@ public class CharacterControllerCC : MonoBehaviour
             if (HasParameter(_animIDSpeed))
                 characterAnimator.SetFloat(_animIDSpeed, speed);
 
-            if (HasParameter(_animIDGrounded))
+            // CRITICAL FIX: Only update Grounded when it actually changes
+            // Setting it every frame can retrigger transitions and prevent jump animations
+            if (HasParameter(_animIDGrounded) && isGrounded != _lastAnimatorGroundedState)
+            {
                 characterAnimator.SetBool(_animIDGrounded, isGrounded);
+                _lastAnimatorGroundedState = isGrounded;
+            }
 
             if (HasParameter(_animIDVerticalVelocity))
                 characterAnimator.SetFloat(_animIDVerticalVelocity, velocity.y);

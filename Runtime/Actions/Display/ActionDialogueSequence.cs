@@ -352,7 +352,8 @@ public class ActionDialogueSequence : MonoBehaviour
             case ImageAnimation.FadeIn:
                 // FIX: Set color channels (RGB) to white before fading the alpha.
                 targetPortrait.color = new Color(1f, 1f, 1f, 0f); // Set to transparent white
-                seq.Append(targetPortrait.DOFade(1f, duration).SetEase(Ease.Linear));
+                seq.Append(DOTween.To(() => targetPortrait.color, x => targetPortrait.color = x,
+                    Color.white, duration).SetEase(Ease.Linear));
                 break;
 
             case ImageAnimation.SlideUpFromBottom:
@@ -360,7 +361,8 @@ public class ActionDialogueSequence : MonoBehaviour
                 Vector2 finalPosBottom = rect.anchoredPosition;
                 Vector2 startPosBottom = finalPosBottom - new Vector2(0f, slideDistance);
                 rect.anchoredPosition = startPosBottom;
-                seq.Append(rect.DOAnchorPos(finalPosBottom, duration).SetEase(imageSlideEasing));
+                seq.Append(DOTween.To(() => rect.anchoredPosition, x => rect.anchoredPosition = x,
+                    finalPosBottom, duration).SetEase(imageSlideEasing));
                 break;
 
             case ImageAnimation.SlideInFromSide:
@@ -369,7 +371,8 @@ public class ActionDialogueSequence : MonoBehaviour
                 Vector2 finalPosSide = rect.anchoredPosition;
                 Vector2 startPosSide = finalPosSide - new Vector2(slideDistance * direction, 0f);
                 rect.anchoredPosition = startPosSide;
-                seq.Append(rect.DOAnchorPos(finalPosSide, duration).SetEase(imageSlideEasing));
+                seq.Append(DOTween.To(() => rect.anchoredPosition, x => rect.anchoredPosition = x,
+                    finalPosSide, duration).SetEase(imageSlideEasing));
                 break;
 
             case ImageAnimation.PopIn:
@@ -401,7 +404,8 @@ public class ActionDialogueSequence : MonoBehaviour
         {
             if (p.color.a > 0f) // Only fade out visible portraits
             {
-                seq.Join(p.DOFade(0f, imageFadeOutDuration).SetEase(Ease.OutQuad));
+                Color targetColor = new Color(p.color.r, p.color.g, p.color.b, 0f);
+                seq.Join(DOTween.To(() => p.color, x => p.color = x, targetColor, imageFadeOutDuration).SetEase(Ease.OutQuad));
                 // Clean up PopIn scale reset after fade
                 if (imageAnimation == ImageAnimation.PopIn)
                 {
@@ -443,14 +447,16 @@ public class ActionDialogueSequence : MonoBehaviour
                 textComp.maxVisibleCharacters = MAX_VISIBLE_CHARACTERS;
                 // FIX: Set color channels (RGB) to white before fading the alpha.
                 textComp.color = new Color(1f, 1f, 1f, 0f); // Set to transparent white
-                seq.Append(textComp.DOFade(1f, textFadeInDuration).SetEase(Ease.Linear));
+                seq.Append(DOTween.To(() => textComp.color, x => textComp.color = x,
+                    Color.white, textFadeInDuration).SetEase(Ease.Linear));
                 break;
 
             case TextAnimation.SlideUpFromBottom:
                 textComp.color = Color.white;
                 Vector2 startPos = finalPosition - new Vector2(0f, textSlideDistance);
                 textRect.anchoredPosition = startPos;
-                seq.Append(textRect.DOAnchorPos(finalPosition, imageFadeInDuration).SetEase(textSlideEasing));
+                seq.Append(DOTween.To(() => textRect.anchoredPosition, x => textRect.anchoredPosition = x,
+                    finalPosition, imageFadeInDuration).SetEase(textSlideEasing));
                 break;
         }
 
@@ -472,7 +478,9 @@ public class ActionDialogueSequence : MonoBehaviour
         }
 
         // Fade out
-        yield return textComp.DOFade(0f, textFadeOutDuration).SetEase(Ease.OutQuad).WaitForCompletion();
+        Color fadeOutColor = new Color(textComp.color.r, textComp.color.g, textComp.color.b, 0f);
+        yield return DOTween.To(() => textComp.color, x => textComp.color = x,
+            fadeOutColor, textFadeOutDuration).SetEase(Ease.OutQuad).WaitForCompletion();
 
         // Reset
         if (textAnimation == TextAnimation.SlideUpFromBottom)
