@@ -17,6 +17,7 @@ public enum PlatformDetectionMode
 /// Common use: Third-person adventure games, action platformers, or character movement systems requiring kinematic control.
 /// </summary>
 [RequireComponent(typeof(CharacterController))]
+[RequireComponent(typeof(PlayerInput))]
 public class CharacterControllerCC : MonoBehaviour
 {
     [Header("Movement Settings")]
@@ -25,6 +26,12 @@ public class CharacterControllerCC : MonoBehaviour
     [Tooltip("Acceleration and deceleration rate")]
     [SerializeField] private float speedChangeRate = 10.0f;
     [SerializeField] private float airControlFactor = 0.5f;
+
+    [Header("Sprint Settings (Optional)")]
+    [Tooltip("Enable sprint functionality (hold Sprint button to run faster)")]
+    [SerializeField] private bool enableSprint = false;
+    [Tooltip("Speed multiplier when sprinting (2.0 = twice as fast)")]
+    [SerializeField] private float sprintSpeedMultiplier = 1.5f;
 
     [Header("Jump Settings")]
     [Tooltip("Height in meters the character can jump")]
@@ -63,15 +70,24 @@ public class CharacterControllerCC : MonoBehaviour
     [SerializeField] private float slopeSlideSpeed = 5f;
 
     [Header("Platform Settings")]
+    [Header("⚠️ OPTIONAL: For moving platforms, create a 'MovingPlatform' tag")]
+    [Space(-20)]
+    [Header("(Edit > Project Settings > Tags and Layers > Tags > +)")]
     [Tooltip("Detect platforms by layer, tag, or both")]
     [SerializeField] private PlatformDetectionMode platformDetectionMode = PlatformDetectionMode.Tag;
     [SerializeField] private LayerMask platformLayer;
-    [SerializeField] private string platformTag = "movingPlatform";
+    [Tooltip("Tag to detect as moving platform. Create this tag in Project Settings if using moving platforms.")]
+    [SerializeField] private string platformTag = "Untagged";
     [SerializeField] private bool applyVerticalMovement = true;
 
     [Header("Animation")]
     [SerializeField] private Animator characterAnimator;
     [SerializeField] private Transform characterMesh;
+    [Header("⚠️ OPTIONAL: For idle emote/fidget animations after being idle")]
+    [Space(-20)]
+    [Header("Set to 0 to disable. Animator can use 'IdleTime' float parameter.")]
+    [Tooltip("Time in seconds before IdleTime parameter starts counting. 0 = disabled. Useful for fidget/emote animations.")]
+    [SerializeField] private float idleTimeBeforeEmote = 0f;
 
     [Header("Events")]
     /// <summary>
@@ -124,6 +140,7 @@ public class CharacterControllerCC : MonoBehaviour
     private Vector3 lastMoveDirection;
     private bool isOnSteepSlope;
     private Vector3 slopeNormal = Vector3.up;
+    private bool isSprinting;
 
     // Dodge state
     private bool dodgeRequested;
@@ -151,9 +168,32 @@ public class CharacterControllerCC : MonoBehaviour
     private int _animIDVerticalVelocity;
     private int _animIDIsDodging;
     private int _animIDIsWalking;
+    private int _animIDIdleTime;
 
     // Animation state tracking (prevents unnecessary updates)
     private bool _lastAnimatorGroundedState;
+
+    // Idle time tracking for emote/fidget animations
+    private float currentIdleTime;
+
+    /// <summary>
+    /// Called when component is first added or reset. Auto-configures PlayerInput component.
+    /// </summary>
+    private void Reset()
+    {
+        // Auto-configure PlayerInput component if it exists
+        PlayerInput playerInput = GetComponent<PlayerInput>();
+        if (playerInput != null)
+        {
+            // Set default map to "Player" so input works immediately
+            playerInput.defaultActionMap = "Player";
+
+            // Enable auto-switch if multiple action maps exist
+            playerInput.neverAutoSwitchControlSchemes = false;
+
+            Debug.Log("CharacterControllerCC: Auto-configured PlayerInput with 'Player' action map");
+        }
+    }
 
     private void Start()
     {
@@ -171,6 +211,7 @@ public class CharacterControllerCC : MonoBehaviour
             _animIDVerticalVelocity = Animator.StringToHash("VerticalVelocity");
             _animIDIsDodging = Animator.StringToHash("IsDodging");
             _animIDIsWalking = Animator.StringToHash("IsWalking");
+            _animIDIdleTime = Animator.StringToHash("IdleTime");
         }
 
         // Initialize jump timeout
@@ -226,6 +267,21 @@ public class CharacterControllerCC : MonoBehaviour
             {
                 dodgeRequested = true;
             }
+        }
+    }
+
+    /// <summary>
+    /// Input System callback for sprint input (only active if enableSprint is true)
+    /// </summary>
+    public void OnSprint(InputValue value)
+    {
+        if (enableSprint)
+        {
+            // For a 'Value' action, this event now correctly fires when the value 
+            // changes from 0 to 1 (press) AND 1 to 0 (release).
+            isSprinting = value.isPressed;
+            // Re-enable your Debug.Log to confirm: 
+            // Debug.Log($"Sprint state changed: isSprinting = {isSprinting}");
         }
     }
 
@@ -525,8 +581,26 @@ public class CharacterControllerCC : MonoBehaviour
 
         Vector3 inputDirection = new Vector3(moveInput.x, 0f, moveInput.y).normalized;
 
+        float targetSpeed = moveSpeed; // Start with base speed
+
+        // --- Calculate Target Speed based on Sprint and Air Control ---
         if (inputDirection != Vector3.zero)
         {
+            float effectiveMaxVelocity = maxVelocity;
+
+            // Apply sprint multiplier if sprinting is enabled and active
+            if (enableSprint && isSprinting && isGrounded)
+            {
+                targetSpeed *= sprintSpeedMultiplier;
+                effectiveMaxVelocity *= sprintSpeedMultiplier; // Also increase max velocity cap
+            }
+
+            if (!isGrounded)
+            {
+                targetSpeed *= airControlFactor;
+            }
+
+            // --- Movement Direction Calculation ---
             Vector3 cameraForward = mainCamera.transform.forward;
             Vector3 cameraRight = mainCamera.transform.right;
 
@@ -538,28 +612,17 @@ public class CharacterControllerCC : MonoBehaviour
             Vector3 moveDirection = (cameraRight * inputDirection.x + cameraForward * inputDirection.z);
             lastMoveDirection = moveDirection;
 
-            // Check if trying to move uphill on steep slope
+            // ... (Steep slope movement block logic remains the same) ...
             bool blockMovement = false;
             if (isOnSteepSlope)
             {
-                // Project move direction onto slope plane
                 Vector3 slopePlaneDirection = Vector3.ProjectOnPlane(moveDirection, slopeNormal).normalized;
-
-                // Check if movement is upward (dot product with up vector is positive)
                 float movementVertical = Vector3.Dot(slopePlaneDirection, Vector3.up);
-
-                // Block if trying to move uphill, allow if moving downhill or sideways
                 blockMovement = movementVertical > 0.01f;
             }
 
             if (!blockMovement)
             {
-                float targetSpeed = moveSpeed;
-                if (!isGrounded)
-                {
-                    targetSpeed *= airControlFactor;
-                }
-
                 // Get current horizontal speed
                 Vector3 horizontalVelocity = new Vector3(velocity.x, 0f, velocity.z);
                 float currentHorizontalSpeed = horizontalVelocity.magnitude;
@@ -568,8 +631,8 @@ public class CharacterControllerCC : MonoBehaviour
                 currentSpeed = Mathf.Lerp(currentHorizontalSpeed, targetSpeed,
                     Time.fixedDeltaTime * speedChangeRate);
 
-                // Clamp to max velocity
-                currentSpeed = Mathf.Min(currentSpeed, maxVelocity);
+                // Clamp to effective max velocity (accounts for sprint)
+                currentSpeed = Mathf.Min(currentSpeed, effectiveMaxVelocity);
 
                 // Apply smoothed speed in movement direction
                 velocity.x = moveDirection.x * currentSpeed;
@@ -578,14 +641,29 @@ public class CharacterControllerCC : MonoBehaviour
         }
         else
         {
-            // No input - smooth deceleration when grounded (but not on steep slopes)
+            // No input - smooth deceleration (grounded, not dodging, not on steep slope)
             if (isGrounded && !isDodging && !isOnSteepSlope)
             {
                 Vector3 horizontalVelocity = new Vector3(velocity.x, 0f, velocity.z);
                 float currentHorizontalSpeed = horizontalVelocity.magnitude;
 
-                // Smooth deceleration to zero
-                currentSpeed = Mathf.Lerp(currentHorizontalSpeed, 0f,
+                // *** THE FIX IS HERE: Set deceleration target based on sprint state/speed ***
+                // Target speed for deceleration is 0 if not moving AND not fast (or if slow).
+                // If we're moving faster than base speed (due to sprint) and input is zero, 
+                // we should decelerate to base speed (moveSpeed) first, then to 0.
+                float decelerationTarget = 0f;
+
+                // If current speed is greater than moveSpeed AND not sprinting, 
+                // the immediate target for deceleration should be the base moveSpeed.
+                // This ensures the sprint velocity is reduced even if we let go of input
+                // while in a sprint.
+                if (currentHorizontalSpeed > moveSpeed + 0.01f) // Use a small tolerance
+                {
+                    decelerationTarget = moveSpeed;
+                }
+
+                // Smooth deceleration to the calculated target (0 or moveSpeed)
+                currentSpeed = Mathf.Lerp(currentHorizontalSpeed, decelerationTarget,
                     Time.fixedDeltaTime * speedChangeRate);
 
                 // Apply deceleration or stop completely if very slow
@@ -603,7 +681,6 @@ public class CharacterControllerCC : MonoBehaviour
             }
         }
     }
-
     private void HandleSlopeSliding()
     {
         // If grounded on a steep slope, slide down
@@ -756,6 +833,23 @@ public class CharacterControllerCC : MonoBehaviour
                 bool isWalking = speed > 0.1f && isGrounded;
                 characterAnimator.SetBool(_animIDIsWalking, isWalking);
             }
+
+            // Track idle time for emote/fidget animations (if enabled)
+            if (HasParameter(_animIDIdleTime) && idleTimeBeforeEmote > 0f)
+            {
+                // Reset idle time if moving, jumping, or dodging
+                if (speed > 0.1f || !isGrounded || isDodging)
+                {
+                    currentIdleTime = 0f;
+                }
+                else
+                {
+                    // Increment idle time when truly idle
+                    currentIdleTime += Time.deltaTime;
+                }
+
+                characterAnimator.SetFloat(_animIDIdleTime, currentIdleTime);
+            }
         }
     }
 
@@ -895,6 +989,7 @@ public class CharacterControllerCC : MonoBehaviour
     public Transform CurrentPlatform => currentPlatform;
     public float DodgeCooldownRemaining => dodgeCooldownTimer;
     public float CurrentSpeed => new Vector3(velocity.x, 0f, velocity.z).magnitude;
+    public bool IsSprinting => isSprinting && enableSprint;
 
     private void OnDrawGizmosSelected()
     {

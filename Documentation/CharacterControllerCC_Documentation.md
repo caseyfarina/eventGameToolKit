@@ -134,8 +134,133 @@ If using a 3D character model with animations:
 | **Speed** | Float | Horizontal movement speed (0 = idle, 8 = running) |
 | **Grounded** | Bool | True when character is on the ground |
 | **VerticalVelocity** | Float | Upward/downward velocity (positive = rising, negative = falling) |
-| **IsDodging** | Bool | True during dodge animation |
-| **IsWalking** | Bool | True when moving on ground (combines Speed > 0.1 && Grounded) |
+| **IsDodging** | Bool | True during dodge roll animation |
+| **IsWalking** | Bool | True when moving on ground (combines `Speed > 0.1 && Grounded`) |
+
+### 🎯 Understanding IsDodging and IsWalking Parameters
+
+**IsDodging (Bool) - Interrupt Any Animation for Dodge:**
+
+This parameter lets dodge animations **interrupt** whatever the character is doing:
+
+```
+Any State → Dodge (Condition: IsDodging == true)
+├─ Priority: High (so it interrupts everything)
+├─ Has Exit Time: ❌ (instant interrupt!)
+└─ Transition Duration: 0.0s
+
+Dodge Animation → Idle (Condition: IsDodging == false)
+├─ Has Exit Time: ✅ (let dodge animation finish)
+├─ Exit Time: 0.9 (90% through animation)
+└─ Transition Duration: 0.15s
+```
+
+**Why use "Any State"?** Dodge can trigger from Idle, Walk, Run, Jump, Fall - any state!
+
+**IsWalking (Bool) - Prevents Air-Walk Bug:**
+
+This is a **convenience parameter** that prevents a common bug:
+
+❌ **Bad Approach** (using Speed alone):
+```
+Idle → Walk (Condition: Speed > 0.1)
+```
+**Problem:** If you jump while moving forward, Speed is still > 0.1, so Walk animation plays in mid-air!
+
+✅ **Good Approach** (using IsWalking):
+```csharp
+// CharacterControllerCC automatically calculates:
+bool isWalking = speed > 0.1f && isGrounded;
+```
+```
+Idle → Walk (Condition: IsWalking == true)
+```
+**Solution:** Walk animation only plays when grounded! No air-walking!
+
+**Parameter Usage Summary:**
+
+| Parameter | Use Case | Typical Transition |
+|-----------|----------|-------------------|
+| **Speed** | Drive Walk/Run blend tree | Walk Blend Tree (0.0 = Idle, 8.0 = Run) |
+| **IsWalking** | Simple Idle ↔ Walk switch | `IsWalking == true` to start walking |
+| **IsDodging** | Interrupt with dodge | `Any State → Dodge` when `IsDodging == true` |
+| **Grounded** | Ground ↔ Air states | `Grounded == false` to enter Air Movement |
+| **VerticalVelocity** | Drive Jump/Fall blend tree | Air Movement Blend Tree (-10 to +5) |
+| **IdleTime** (Optional) | Emote/fidget after idle | `Idle → Emote` when `IdleTime > 5.0` |
+
+### 🎯 Understanding IdleTime for Emote/Fidget Animations
+
+The **IdleTime** parameter is an **optional** float that tracks how long the character has been standing still. This is perfect for playing fidget animations or emotes after being idle!
+
+**How IdleTime Works:**
+- Starts at `0.0` when character is moving, jumping, or dodging
+- Counts up in seconds when character is truly idle (not moving, grounded, not dodging)
+- Automatically resets to `0.0` when player moves again
+
+**Setup Steps:**
+
+1. **Enable in CharacterControllerCC:**
+   - Set **Idle Time Before Emote** to a positive value (e.g., `5.0` for 5 seconds)
+   - Set to `0` to disable this feature
+
+2. **Add parameter in Animator:**
+   - Create a Float parameter called **"IdleTime"**
+
+3. **Create emote transition:**
+   ```
+   Idle → Emote (Condition: IdleTime > 5.0)
+   ├─ Has Exit Time: ❌
+   └─ Transition Duration: 0.2s
+
+   Emote → Idle (Condition: IdleTime < 0.1)  ← Resets when moving
+   ├─ Has Exit Time: ✅ (let emote finish)
+   ├─ Exit Time: 0.95
+   └─ Transition Duration: 0.3s
+   ```
+
+**Example Use Cases:**
+- **Fidget Animation**: Character looks around, adjusts clothing at 3 seconds idle
+- **Stretching**: Character stretches or yawns at 8 seconds idle
+- **Boredom**: Character sits down, checks phone at 10 seconds idle
+- **Multiple Emotes**: Chain multiple emotes with different thresholds (5s, 10s, 15s)
+
+**Advanced Pattern - Multiple Emotes:**
+```
+Idle
+├─ → Fidget_1   (IdleTime > 3.0 && IdleTime < 6.0)
+├─ → Fidget_2   (IdleTime > 6.0 && IdleTime < 10.0)
+└─ → Sit_Down   (IdleTime > 10.0)
+
+Each emote → Idle (IdleTime < 0.1)
+```
+
+This creates a progression of idle behaviors the longer the player waits!
+
+### 🎯 Understanding VerticalVelocity for Airborne Animations
+
+The **VerticalVelocity** parameter is the **Y component** of the character's velocity (from `controller.velocity.y`). This float value is crucial for creating smooth, realistic airborne animations.
+
+**How VerticalVelocity Works:**
+- **Positive values** = Character moving upward (jumping, launched up)
+  - Example: `+5.0` at start of jump, decreasing as gravity slows you down
+- **Zero** = Peak of jump (brief moment before falling starts)
+- **Negative values** = Character falling downward
+  - Example: `-10.0` while falling, increasing to terminal velocity `-50.0`
+
+**Best Practice - Use Blend Trees for Smooth Air Animations:**
+
+Instead of simple state transitions, create a **1D Blend Tree** for your airborne movement:
+
+```
+Air Movement (1D Blend Tree)
+Parameter: VerticalVelocity
+├─ Jump Start Animation    (Threshold: +3.0 to +6.0)
+├─ Jump Apex Animation      (Threshold: -0.5 to +0.5)
+├─ Fall Slow Animation      (Threshold: -3.0 to -0.5)
+└─ Fall Fast Animation      (Threshold: -10.0 to -3.0)
+```
+
+This creates **smooth blending** as velocity changes, avoiding sudden animation pops!
 
 **Example Animator State Setup:**
 ```
@@ -168,6 +293,50 @@ Dodge
 │  └─ Has Exit Time: ✅ (Exit Time: 0.9)
 │  └─ Transition Duration: 0.15s
 ```
+
+### 🎓 Advanced: Blend Tree Setup for Airborne Animations
+
+**Why Use Blend Trees for VerticalVelocity?**
+
+❌ **Simple Transitions** (basic):
+- Jump animation plays at +5.0 velocity
+- Fall animation plays at -5.0 velocity
+- **Problem**: Sudden animation "pop" when switching between them
+
+✅ **1D Blend Tree** (professional):
+- Jump smoothly blends into fall as velocity changes from +5.0 → 0.0 → -5.0
+- **Result**: Natural, fluid airborne movement like AAA games
+
+**How to Create Air Movement Blend Tree:**
+
+1. In Animator window, create new State called "Air Movement"
+2. Right-click state → "Create new BlendTree in State"
+3. Double-click to enter blend tree
+4. In Inspector:
+   - **Blend Type**: 1D
+   - **Parameter**: VerticalVelocity
+
+5. Add motions (click **+** button):
+   ```
+   Motion 1: Jump_Ascend     | Threshold: +4.0  (shooting upward)
+   Motion 2: Jump_Peak       | Threshold:  0.0  (apex of jump)
+   Motion 3: Fall_Start      | Threshold: -2.0  (beginning to fall)
+   Motion 4: Fall_Fast       | Threshold: -8.0  (falling rapidly)
+   ```
+
+6. Create transitions:
+   ```
+   Grounded → Air Movement (Condition: Grounded == false)
+   Air Movement → Grounded (Condition: Grounded == true)
+   ```
+
+**What Happens:**
+- At VerticalVelocity = +4.0: 100% Jump_Ascend animation
+- At VerticalVelocity = +2.0: 50% Jump_Ascend, 50% Jump_Peak (blending!)
+- At VerticalVelocity = 0.0: 100% Jump_Peak animation
+- At VerticalVelocity = -5.0: 50% Fall_Start, 50% Fall_Fast (smooth!)
+
+This technique is used in Unity's Third Person Controller starter assets and professional games!
 
 ### Step 5: Setup Layers
 
