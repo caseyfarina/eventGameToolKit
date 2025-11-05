@@ -1,6 +1,6 @@
 {
   "name": "com.caseyfarina.eventgametoolkit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "Event Game Toolkit",
   "description": "Educational Unity toolkit for Animation and Interactivity class. Provides modular, no-code components using UnityEvents for creating interactive experiences. Includes systems for input detection, spawning, health, timers, physics, dialogue, decal animation, and more.",
   "unity": "6000.0",
