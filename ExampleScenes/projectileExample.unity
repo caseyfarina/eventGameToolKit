@@ -1366,6 +1366,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6486436437444190957, guid: 0db4a24fa517ac045baebf3cda971978, type: 3}
+      propertyPath: enableSprint
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6486436437444190957, guid: 0db4a24fa517ac045baebf3cda971978, type: 3}
       propertyPath: rotationSmoothTime
       value: 0.1323
       objectReference: {fileID: 0}
@@ -1787,6 +1791,12 @@ MonoBehaviour:
   projectileSpeed: 30
   projectileLifetime: 1
   spawnOffset: {x: 0, y: 0, z: 0}
+  cooldownTime: 1
+  projectileCount: 1
+  spreadAngle: 0
+  animateSpawn: 0
+  spawnScaleDuration: 0.2
+  spawnStartScale: 0.1
   onProjectileSpawned:
     m_PersistentCalls:
       m_Calls:
@@ -1802,6 +1812,9 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  onCooldownActive:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &1664573396
 MonoBehaviour:
   m_ObjectHideFlags: 0

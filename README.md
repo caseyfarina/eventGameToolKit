@@ -63,18 +63,10 @@ Located in `Actions/` folder:
 - **ActionRespawnPlayer** - Player respawn system
 
 **UI & Display:**
-- **ActionDisplayText** - Text display with DOTween animations (fade, typewriter effect)
+- **ActionDisplayText** - Text display with DOTween animations
 - **ActionDisplayImage** - Image fading and scaling with DOTween
-- **ActionDialogueSequence** - Complete dialogue/visual novel system with:
-  - Sequential dialogue playback with character portraits
-  - Multiple animation types for images and text
-  - Optional decision system with player choices
-  - Keyboard/gamepad navigation support
-  - Click-through to advance dialogue
-  - Custom font support (TMP_FontAsset)
-  - Live editor preview with decision panel preview
-  - Configurable button opacity and layout
-- **DialogueUIController** - Dialogue UI management (companion to ActionDialogueSequence)
+- **ActionDialogueSequence** - Complete dialogue/visual novel system
+- **DialogueUIController** - Dialogue UI management
 
 **Decal Animation System:**
 - **ActionDecalSequence** - Frame-by-frame URP decal animation

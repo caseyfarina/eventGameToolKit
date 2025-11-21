@@ -1682,6 +1682,151 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c6553b80e79ed144185d85ac3b71d9b4, type: 3}
+--- !u!1 &1376306449
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1376306452}
+  - component: {fileID: 1376306451}
+  - component: {fileID: 1376306450}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1376306450
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1376306449}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdab8a2cba283fb48a6a918c1ce12264, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: EventGameToolkit.Runtime::DialogueUIController
+--- !u!114 &1376306451
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1376306449}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c10d1e3508a02f847a539dcc25a29843, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: EventGameToolkit.Runtime::ActionDialogueSequence
+  uiController: {fileID: 1376306450}
+  dialogueLines:
+  - orientation: 0
+    dialogueText: addsfasdfa
+    displayTime: 2.96
+    characterImage: {fileID: 520502185, guid: 938bea0743bd11842b3fe6120782ee52, type: 3}
+  - orientation: 1
+    dialogueText: sadfsadfadsf
+    displayTime: 4.7
+    characterImage: {fileID: -1694905035, guid: 5f6ff57dd40092c4ab1ce7f04d9f9b26, type: 3}
+  playOnStart: 1
+  loop: 0
+  enableClickThrough: 0
+  imageAnimation: 1
+  textAnimation: 1
+  imageFadeInDuration: 0.2
+  imageFadeOutDuration: 0.2
+  slideDistance: 500
+  imageSlideEasing: 6
+  textFadeInDuration: 0.2
+  textFadeOutDuration: 0.2
+  charactersPerSecond: 30
+  textSlideDistance: 100
+  textSlideEasing: 6
+  backgroundImage: {fileID: 0}
+  backgroundPosition: {x: 0, y: 0}
+  backgroundSize: {x: 1920, y: 1080}
+  leftPosition: {x: -400, y: -100}
+  rightPosition: {x: 400, y: -100}
+  portraitSize: {x: 300, y: 300}
+  textPosition: {x: -82.3, y: -300}
+  textSize: {x: 1200, y: 200}
+  fontSize: 48
+  customFont: {fileID: 11400000, guid: 63df377f103cdde4c8a3c680f5994896, type: 2}
+  enableDecision: 1
+  decisionChoices:
+  - choiceText: no way
+    choiceImage: {fileID: 21300000, guid: e0264e299e9f7b5449afd103be8cd224, type: 3}
+    onChoiceSelected:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+          m_MethodName: SetActive
+          m_Mode: 6
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 1
+          m_CallState: 2
+  - choiceText: yes way
+    choiceImage: {fileID: 21300000, guid: b0fa70abd2a79904cb00b175dfd8ec7e, type: 3}
+    onChoiceSelected:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+          m_MethodName: SetActive
+          m_Mode: 6
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 1
+          m_CallState: 2
+  decisionPanelPosition: {x: 26.6, y: -200}
+  decisionButtonSize: {x: 404.29, y: 100}
+  decisionButtonSpacing: 54.8
+  decisionImageSize: {x: 80, y: 80}
+  decisionFontSize: 60.7
+  decisionButtonOpacity: 0
+  onDialogueStart:
+    m_PersistentCalls:
+      m_Calls: []
+  onDialogueComplete:
+    m_PersistentCalls:
+      m_Calls: []
+  onLineChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  onDecisionStart:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!4 &1376306452
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1376306449}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 34.44553, y: 0.00001, z: -25.09164}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1416522086
 GameObject:
   m_ObjectHideFlags: 0
@@ -2507,3 +2652,4 @@ SceneRoots:
   - {fileID: 563814528}
   - {fileID: 668626153}
   - {fileID: 941978221}
+  - {fileID: 1376306452}
