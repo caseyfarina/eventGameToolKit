@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.Events;
-using System.Collections;
+using DG.Tweening;
 
 /// <summary>
 /// Centralized audio control with mixer integration, music crossfading, and sound effect management.
@@ -23,6 +23,9 @@ public class GameAudioManager : MonoBehaviour
     [SerializeField] private AudioSource sfxSource;
     [SerializeField] private AudioClip[] soundEffects;
 
+    [Header("Ambient Settings")]
+    [SerializeField] private AudioSource ambientSource;
+
     [Header("Events")]
     /// <summary>
     /// Fires when a music track starts playing
@@ -36,11 +39,31 @@ public class GameAudioManager : MonoBehaviour
     /// Fires when a sound effect is played
     /// </summary>
     public UnityEvent onSoundEffectPlayed;
+    /// <summary>
+    /// Fires when an ambient track starts playing
+    /// </summary>
+    public UnityEvent onAmbientStarted;
+    /// <summary>
+    /// Fires when the ambient track is stopped
+    /// </summary>
+    public UnityEvent onAmbientStopped;
+    /// <summary>
+    /// Fires when a gradual volume change completes
+    /// </summary>
+    public UnityEvent onVolumeChangeComplete;
 
-    private Coroutine currentFadeCoroutine;
+    // DOTween references for cleanup and interruption
+    private Tween musicFadeTween;
+    private Tween musicVolumeTween;
+    private Tween sfxVolumeTween;
+    private Tween masterVolumeTween;
+    private Tween ambientFadeTween;
+    private Tween ambientVolumeTween;
 
     public bool IsMusicPlaying => musicSource != null && musicSource.isPlaying;
-    public bool IsFading => currentFadeCoroutine != null;
+    public bool IsAmbientPlaying => ambientSource != null && ambientSource.isPlaying;
+    public bool IsFading => (musicFadeTween != null && musicFadeTween.IsActive() && musicFadeTween.IsPlaying()) ||
+                            (ambientFadeTween != null && ambientFadeTween.IsActive() && ambientFadeTween.IsPlaying());
 
     private void Start()
     {
@@ -69,6 +92,16 @@ public class GameAudioManager : MonoBehaviour
             sfxSource.playOnAwake = false;
         }
 
+        // Create ambient source if not assigned
+        if (ambientSource == null)
+        {
+            GameObject ambientObject = new GameObject("Ambient Source");
+            ambientObject.transform.SetParent(transform);
+            ambientSource = ambientObject.AddComponent<AudioSource>();
+            ambientSource.loop = true;
+            ambientSource.playOnAwake = false;
+        }
+        
         // Assign to mixer groups if mixer is available
         if (audioMixer != null)
         {
@@ -79,6 +112,10 @@ public class GameAudioManager : MonoBehaviour
             groups = audioMixer.FindMatchingGroups("SFX");
             if (groups.Length > 0)
                 sfxSource.outputAudioMixerGroup = groups[0];
+
+            groups = audioMixer.FindMatchingGroups("Ambient");
+            if (groups.Length > 0)
+                ambientSource.outputAudioMixerGroup = groups[0];
         }
     }
 
@@ -91,26 +128,34 @@ public class GameAudioManager : MonoBehaviour
     {
         if (musicClip == null) return;
 
-        if (currentFadeCoroutine != null)
-            StopCoroutine(currentFadeCoroutine);
+        // Kill any existing fade
+        musicFadeTween?.Kill();
 
         if (fadeIn && musicSource.isPlaying)
         {
             // Crossfade from current track to new track
-            currentFadeCoroutine = StartCoroutine(CrossfadeMusic(musicClip, defaultFadeDuration));
+            CrossfadeMusic(musicClip, defaultFadeDuration);
         }
         else
         {
             // Direct play
             musicSource.clip = musicClip;
-            musicSource.Play();
 
             if (fadeIn)
             {
-                currentFadeCoroutine = StartCoroutine(FadeIn(musicSource, defaultFadeDuration));
-            }
+                float targetVolume = musicSource.volume;
+                musicSource.volume = 0f;
+                musicSource.Play();
 
-            onMusicStarted.Invoke();
+                musicFadeTween = FadeAudioSource(musicSource, targetVolume, defaultFadeDuration)
+                    .SetUpdate(true)
+                    .OnComplete(() => onMusicStarted?.Invoke());
+            }
+            else
+            {
+                musicSource.Play();
+                onMusicStarted?.Invoke();
+            }
         }
     }
 
@@ -121,17 +166,25 @@ public class GameAudioManager : MonoBehaviour
     {
         if (!musicSource.isPlaying) return;
 
-        if (currentFadeCoroutine != null)
-            StopCoroutine(currentFadeCoroutine);
+        // Kill any existing fade
+        musicFadeTween?.Kill();
 
         if (fadeOut)
         {
-            currentFadeCoroutine = StartCoroutine(FadeOutAndStop(musicSource, defaultFadeDuration));
+            float startVolume = musicSource.volume;
+            musicFadeTween = FadeAudioSource(musicSource, 0f, defaultFadeDuration)
+                .SetUpdate(true)
+                .OnComplete(() =>
+                {
+                    musicSource.Stop();
+                    musicSource.volume = startVolume; // Restore volume for next play
+                    onMusicStopped?.Invoke();
+                });
         }
         else
         {
             musicSource.Stop();
-            onMusicStopped.Invoke();
+            onMusicStopped?.Invoke();
         }
     }
 
@@ -191,6 +244,139 @@ public class GameAudioManager : MonoBehaviour
 
     #endregion
 
+    #region Ambient Control
+
+    /// <summary>
+    /// Play ambient track with optional fade in. Crossfades if ambient is already playing.
+    /// </summary>
+    public void PlayAmbient(AudioClip ambientClip, bool fadeIn = true)
+    {
+        if (ambientClip == null) return;
+
+        // Kill any existing fade
+        ambientFadeTween?.Kill();
+
+        if (fadeIn && ambientSource.isPlaying)
+        {
+            // Crossfade from current ambient to new ambient
+            CrossfadeAmbient(ambientClip, defaultFadeDuration);
+        }
+        else
+        {
+            // Direct play
+            ambientSource.clip = ambientClip;
+
+            if (fadeIn)
+            {
+                float targetVolume = ambientSource.volume;
+                ambientSource.volume = 0f;
+                ambientSource.Play();
+
+                ambientFadeTween = FadeAudioSource(ambientSource, targetVolume, defaultFadeDuration)
+                    .SetUpdate(true)
+                    .OnComplete(() => onAmbientStarted?.Invoke());
+            }
+            else
+            {
+                ambientSource.Play();
+                onAmbientStarted?.Invoke();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Stop ambient with optional fade out
+    /// </summary>
+    public void StopAmbient(bool fadeOut = true)
+    {
+        if (!ambientSource.isPlaying) return;
+
+        // Kill any existing fade
+        ambientFadeTween?.Kill();
+
+        if (fadeOut)
+        {
+            float startVolume = ambientSource.volume;
+            ambientFadeTween = FadeAudioSource(ambientSource, 0f, defaultFadeDuration)
+                .SetUpdate(true)
+                .OnComplete(() =>
+                {
+                    ambientSource.Stop();
+                    ambientSource.volume = startVolume; // Restore volume for next play
+                    onAmbientStopped?.Invoke();
+                });
+        }
+        else
+        {
+            ambientSource.Stop();
+            onAmbientStopped?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Pause ambient audio
+    /// </summary>
+    public void PauseAmbient()
+    {
+        if (ambientSource.isPlaying)
+            ambientSource.Pause();
+    }
+
+    /// <summary>
+    /// Resume ambient audio
+    /// </summary>
+    public void ResumeAmbient()
+    {
+        if (!ambientSource.isPlaying && ambientSource.clip != null)
+            ambientSource.UnPause();
+    }
+
+    private void CrossfadeAmbient(AudioClip newClip, float duration)
+    {
+        AudioSource tempSource = CreateTemporaryAmbientSource();
+        tempSource.clip = newClip;
+        tempSource.volume = 0f;
+        tempSource.Play();
+
+        float originalVolume = ambientSource.volume;
+
+        // Create a sequence for the crossfade
+        ambientFadeTween = DOTween.Sequence()
+            .Append(FadeAudioSource(ambientSource, 0f, duration))
+            .Join(FadeAudioSource(tempSource, originalVolume, duration))
+            .SetUpdate(true)
+            .OnComplete(() =>
+            {
+                // Complete the crossfade - swap to main source
+                ambientSource.Stop();
+                ambientSource.clip = newClip;
+                ambientSource.volume = originalVolume;
+                ambientSource.time = tempSource.time;
+                ambientSource.Play();
+
+                Destroy(tempSource.gameObject);
+                onAmbientStarted?.Invoke();
+            });
+    }
+
+    private AudioSource CreateTemporaryAmbientSource()
+    {
+        GameObject tempObject = new GameObject("Temp Ambient Source");
+        tempObject.transform.SetParent(transform);
+        AudioSource tempSource = tempObject.AddComponent<AudioSource>();
+
+        // Copy settings from ambient source
+        tempSource.outputAudioMixerGroup = ambientSource.outputAudioMixerGroup;
+        tempSource.loop = ambientSource.loop;
+        tempSource.pitch = ambientSource.pitch;
+
+        return tempSource;
+
+        
+    }
+
+    #endregion
+
     #region Volume Control
 
     /// <summary>
@@ -229,74 +415,143 @@ public class GameAudioManager : MonoBehaviour
 
     #endregion
 
-    #region Fading Coroutines
+    #region Gradual Volume Control
 
-    private IEnumerator CrossfadeMusic(AudioClip newClip, float duration)
+    /// <summary>
+    /// Gradually change music volume over time (0-1 range). Uses default fade duration.
+    /// </summary>
+    public void SetMusicVolumeGradual(float targetVolume)
+    {
+        SetMusicVolumeGradual(targetVolume, defaultFadeDuration);
+    }
+
+    /// <summary>
+    /// Gradually change music volume over time (0-1 range) with custom duration.
+    /// </summary>
+    public void SetMusicVolumeGradual(float targetVolume, float duration)
+    {
+        if (musicSource == null) return;
+
+        musicVolumeTween?.Kill();
+        musicVolumeTween = FadeAudioSource(musicSource, Mathf.Clamp01(targetVolume), duration)
+            .SetUpdate(true)
+            .OnComplete(() => onVolumeChangeComplete?.Invoke());
+    }
+
+    /// <summary>
+    /// Gradually change SFX volume over time (0-1 range). Uses default fade duration.
+    /// </summary>
+    public void SetSFXVolumeGradual(float targetVolume)
+    {
+        SetSFXVolumeGradual(targetVolume, defaultFadeDuration);
+    }
+
+    /// <summary>
+    /// Gradually change SFX volume over time (0-1 range) with custom duration.
+    /// </summary>
+    public void SetSFXVolumeGradual(float targetVolume, float duration)
+    {
+        if (sfxSource == null) return;
+
+        sfxVolumeTween?.Kill();
+        sfxVolumeTween = FadeAudioSource(sfxSource, Mathf.Clamp01(targetVolume), duration)
+            .SetUpdate(true)
+            .OnComplete(() => onVolumeChangeComplete?.Invoke());
+    }
+
+    /// <summary>
+    /// Gradually change ambient volume over time (0-1 range). Uses default fade duration.
+    /// </summary>
+    public void SetAmbientVolumeGradual(float targetVolume)
+    {
+        SetAmbientVolumeGradual(targetVolume, defaultFadeDuration);
+    }
+
+    /// <summary>
+    /// Gradually change ambient volume over time (0-1 range) with custom duration.
+    /// </summary>
+    public void SetAmbientVolumeGradual(float targetVolume, float duration)
+    {
+        if (ambientSource == null) return;
+
+        ambientVolumeTween?.Kill();
+        ambientVolumeTween = FadeAudioSource(ambientSource, Mathf.Clamp01(targetVolume), duration)
+            .SetUpdate(true)
+            .OnComplete(() => onVolumeChangeComplete?.Invoke());
+    }
+
+    /// <summary>
+    /// Gradually change master volume over time (0-1 range). Uses default fade duration.
+    /// Requires AudioMixer to be assigned.
+    /// </summary>
+    public void SetMasterVolumeGradual(float targetVolume)
+    {
+        SetMasterVolumeGradual(targetVolume, defaultFadeDuration);
+    }
+
+    /// <summary>
+    /// Gradually change master volume over time (0-1 range) with custom duration.
+    /// Requires AudioMixer to be assigned.
+    /// </summary>
+    public void SetMasterVolumeGradual(float targetVolume, float duration)
+    {
+        if (audioMixer == null) return;
+
+        masterVolumeTween?.Kill();
+
+        // Get current mixer volume
+        float currentDb;
+        if (!audioMixer.GetFloat(masterVolumeParameter, out currentDb))
+        {
+            currentDb = 0f;
+        }
+        float currentVolume = Mathf.Pow(10f, currentDb / 20f);
+
+        float clampedTarget = Mathf.Clamp01(targetVolume);
+
+        masterVolumeTween = DOTween.To(
+            () => currentVolume,
+            x =>
+            {
+                float dbValue = x > 0 ? 20f * Mathf.Log10(x) : -80f;
+                audioMixer.SetFloat(masterVolumeParameter, dbValue);
+            },
+            clampedTarget,
+            duration
+        ).SetUpdate(true)
+         .OnComplete(() => onVolumeChangeComplete?.Invoke());
+    }
+
+    #endregion
+
+    #region Music Crossfading
+
+    private void CrossfadeMusic(AudioClip newClip, float duration)
     {
         AudioSource tempSource = CreateTemporaryAudioSource();
         tempSource.clip = newClip;
         tempSource.volume = 0f;
         tempSource.Play();
 
-        float elapsed = 0f;
         float originalVolume = musicSource.volume;
 
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            float progress = elapsed / duration;
+        // Create a sequence for the crossfade
+        musicFadeTween = DOTween.Sequence()
+            .Append(FadeAudioSource(musicSource, 0f, duration))
+            .Join(FadeAudioSource(tempSource, originalVolume, duration))
+            .SetUpdate(true)
+            .OnComplete(() =>
+            {
+                // Complete the crossfade - swap to main source
+                musicSource.Stop();
+                musicSource.clip = newClip;
+                musicSource.volume = originalVolume;
+                musicSource.time = tempSource.time;
+                musicSource.Play();
 
-            musicSource.volume = originalVolume * (1f - progress);
-            tempSource.volume = originalVolume * progress;
-
-            yield return null;
-        }
-
-        // Complete the crossfade
-        musicSource.Stop();
-        musicSource.clip = newClip;
-        musicSource.volume = originalVolume;
-        musicSource.time = tempSource.time;
-        musicSource.Play();
-
-        Destroy(tempSource.gameObject);
-        currentFadeCoroutine = null;
-        onMusicStarted.Invoke();
-    }
-
-    private IEnumerator FadeIn(AudioSource source, float duration)
-    {
-        float targetVolume = source.volume;
-        source.volume = 0f;
-
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            source.volume = targetVolume * (elapsed / duration);
-            yield return null;
-        }
-
-        source.volume = targetVolume;
-        currentFadeCoroutine = null;
-    }
-
-    private IEnumerator FadeOutAndStop(AudioSource source, float duration)
-    {
-        float startVolume = source.volume;
-
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            source.volume = startVolume * (1f - (elapsed / duration));
-            yield return null;
-        }
-
-        source.volume = startVolume;
-        source.Stop();
-        currentFadeCoroutine = null;
-        onMusicStopped.Invoke();
+                Destroy(tempSource.gameObject);
+                onMusicStarted?.Invoke();
+            });
     }
 
     private AudioSource CreateTemporaryAudioSource()
@@ -311,6 +566,33 @@ public class GameAudioManager : MonoBehaviour
         tempSource.pitch = musicSource.pitch;
 
         return tempSource;
+    }
+
+    #endregion
+
+    #region Cleanup
+
+    private void OnDestroy()
+    {
+        // Clean up all DOTween tweens
+        musicFadeTween?.Kill();
+        musicVolumeTween?.Kill();
+        sfxVolumeTween?.Kill();
+        masterVolumeTween?.Kill();
+        ambientFadeTween?.Kill();
+        ambientVolumeTween?.Kill();
+    }
+
+    #endregion
+
+    #region DOTween Helpers
+
+    /// <summary>
+    /// Fade AudioSource volume (DOTween FREE compatible - no Pro required)
+    /// </summary>
+    private Tween FadeAudioSource(AudioSource source, float targetVolume, float duration)
+    {
+        return DOTween.To(() => source.volume, x => source.volume = x, targetVolume, duration);
     }
 
     #endregion
@@ -343,11 +625,28 @@ public class GameAudioManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Simple method for students - play ambient by name
+    /// </summary>
+    public void PlayAmbientByName(string resourcePath)
+    {
+        AudioClip clip = Resources.Load<AudioClip>(resourcePath);
+        if (clip != null)
+        {
+            PlayAmbient(clip);
+        }
+        else
+        {
+            Debug.LogWarning($"Could not find audio clip at path: {resourcePath}");
+        }
+    }
+
+    /// <summary>
     /// Stop all audio
     /// </summary>
     public void StopAllAudio()
     {
         StopMusic(false);
+        StopAmbient(false);
         if (sfxSource != null && sfxSource.isPlaying)
             sfxSource.Stop();
     }
