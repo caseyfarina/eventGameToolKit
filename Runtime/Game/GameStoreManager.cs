@@ -37,9 +37,6 @@ public class StoreItem
     /// <summary>Fires when the player tries to buy but cannot afford the item</summary>
     public UnityEvent onCannotAfford;
 
-    /// <summary>Fires when the player tries to buy but cannot afford the item</summary>
-    public UnityEvent onCannotAfford;
-
     // Runtime UI references — set by GameStoreManager, not serialized
     [System.NonSerialized] public int purchaseCount;
     [System.NonSerialized] public Button buyButton;
