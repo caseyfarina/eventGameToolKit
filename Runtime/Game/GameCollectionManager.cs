@@ -51,6 +51,9 @@ public class GameCollectionManager : MonoBehaviour
     [Tooltip("Save the current value when loading a new scene. Each scene can have its own manager — only the value carries over.")]
     [SerializeField] private bool persistAcrossScenes = false;
 
+    [Tooltip("What happens to the value when the scene is loaded via RestartScene. Reset To Default returns to the Inspector starting value.")]
+    [SerializeField] private RestartBehavior onRestartBehavior = RestartBehavior.ResetToDefault;
+
     [Header("Value Settings")]
     [Tooltip("Current value (score, coins, items, etc.)")]
     [SerializeField] private int currentValue = 0;
@@ -177,7 +180,12 @@ public class GameCollectionManager : MonoBehaviour
     {
         // If persistence is enabled, read the carried-over value (or use Inspector default on first load)
         if (persistAcrossScenes)
-            currentValue = GameData.Instance.GetInt(GameData.COLLECTION_SLOT, currentValue);
+        {
+            if (GameData.IsRestart && onRestartBehavior == RestartBehavior.ResetToDefault)
+                GameData.Instance.ClearInt(GameData.COLLECTION_SLOT);
+            else
+                currentValue = GameData.Instance.GetInt(GameData.COLLECTION_SLOT, currentValue);
+        }
 
         // Initialize threshold states based on starting value
         foreach (var t in thresholds)
@@ -282,6 +290,15 @@ public class GameCollectionManager : MonoBehaviour
         UpdateUIText();
         UpdateBar();
         CheckThresholds();
+    }
+
+    /// <summary>
+    /// Clears the persisted value so the next scene load starts from this manager's Inspector default.
+    /// Wire this to a game-over or restart event when you want score to reset on scene reload.
+    /// </summary>
+    public void ResetPersistence()
+    {
+        GameData.Instance.ClearInt(GameData.COLLECTION_SLOT);
     }
 
     private void CheckThresholds()
