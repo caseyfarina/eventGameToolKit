@@ -361,7 +361,7 @@ public class GameInventoryManager : MonoBehaviour
             slot.countText.fontSize = fontSize;
             slot.countText.color = textColor;
             slot.countText.alignment = TextAlignmentOptions.Center;
-            slot.countText.enableWordWrapping = false;
+            slot.countText.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
             slot.countText.overflowMode = TextOverflowModes.Overflow;
 
             if (customFont != null)

@@ -359,7 +359,7 @@ public class GameCollectionManager : MonoBehaviour
         uiText.alignment = textAlignment;
         uiText.color = textColor;
         uiText.overflowMode = TextOverflowModes.Overflow;
-        uiText.enableWordWrapping = false;
+        uiText.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
 
         if (customFont != null)
         {
@@ -555,7 +555,7 @@ public class GameCollectionManager : MonoBehaviour
             uiText.alignment = textAlignment;
             uiText.color = textColor;
             uiText.overflowMode = TextOverflowModes.Overflow;
-            uiText.enableWordWrapping = false;
+            uiText.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
             uiText.text = labelPrefix + "999";
 
             if (customFont != null)

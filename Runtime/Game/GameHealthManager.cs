@@ -418,7 +418,7 @@ public class GameHealthManager : MonoBehaviour
         uiText.alignment = textAlignment;
         uiText.color = textColor;
         uiText.overflowMode = TextOverflowModes.Overflow;
-        uiText.enableWordWrapping = false;
+        uiText.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
 
         if (customFont != null)
         {
@@ -617,7 +617,7 @@ public class GameHealthManager : MonoBehaviour
             uiText.alignment = textAlignment;
             uiText.color = textColor;
             uiText.overflowMode = TextOverflowModes.Overflow;
-            uiText.enableWordWrapping = false;
+            uiText.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
 
             if (showMaxInText)
                 uiText.text = labelPrefix + "75 / 100";
