@@ -1021,7 +1021,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: EventGameToolkit.Runtime::CharacterControllerFP
   moveSpeed: 6
   maxVelocity: 6
-  slideAmount: 0.5
+  slideAmount: 0
   airControlFactor: 0.5
   dodgeDistance: 5
   dodgeSpeed: 20
