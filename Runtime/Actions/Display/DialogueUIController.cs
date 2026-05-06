@@ -140,12 +140,31 @@ public class DialogueUIController : MonoBehaviour
     /// </summary>
     public void CreateDialogueUI(Transform parent)
     {
-        // Destroy existing before creating new in editor mode
+        // Destroy the tracked canvas reference first
         CleanupUI();
+
+        // Destroy any orphaned DialogueCanvas objects left after a domain reload
+        // (the reference is lost but the GameObject persists as a child).
+        if (!Application.isPlaying)
+        {
+            for (int i = parent.childCount - 1; i >= 0; i--)
+            {
+                Transform child = parent.GetChild(i);
+                if (child.name == "DialogueCanvas")
+                    DestroyImmediate(child.gameObject);
+            }
+        }
 
         // 1. Create Canvas container
         dialogueCanvas = new GameObject("DialogueCanvas");
         dialogueCanvas.transform.SetParent(parent);
+
+        // In edit mode, mark as DontSave so it is never written to the scene file
+        // and is automatically destroyed by Unity on domain reload.
+        if (!Application.isPlaying)
+        {
+            dialogueCanvas.hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy;
+        }
 
         canvas = dialogueCanvas.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;

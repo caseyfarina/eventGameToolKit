@@ -12,8 +12,18 @@ public class ActionDialogueSequenceEditor : Editor
 
     private void OnEnable()
     {
-        // Clean up any existing preview when editor is enabled
         EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+
+        // Destroy any canvas that survived a domain reload (the serialized reference
+        // is gone but the DontSave GameObject may still be in the hierarchy).
+        if (!Application.isPlaying)
+        {
+            ActionDialogueSequence dialogue = target as ActionDialogueSequence;
+            if (dialogue != null)
+                dialogue.DestroyPreviewCanvas();
+        }
+
+        showPreview = false;
     }
 
     private void OnDisable()
