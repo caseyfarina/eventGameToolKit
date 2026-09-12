@@ -17,22 +17,27 @@ survives.
 ## Next
 
 - Keep receiving syncs from the harness as example-scene coverage is completed
+- Two scenes' worth of work remain in the harness: `PuzzleSequenceChecker` into the existing
+  `puzzleExample`, and a `StopMotionPostProcess` scene using the Mixamo robots
 - Fix the packaging bug below before anyone installs by git URL again
 
 ## Recently finished
 
+- **Two new example scenes.** `Example3D_DecalAnimation` covers all four DecalAnimation
+  components with procedurally generated RGBA decal textures the package owns.
+  `Example3D_Physics` covers `PhysicsForceZone`, `PhysicsBallPlayerController`,
+  `PhysicsEnemyController` and `CharacterPushRigidBody`.
+- **Label legibility pass across every generated scene** — labels are larger, re-spaced to
+  remove collisions, and coloured to contrast with what is behind them.
+- Component coverage is now 71 of 73 (75 scripts; `applicationFPSLimiting` and
+  `lockMouseCursorToDisplay` are excluded by decision and will never get example scenes).
 - **Input System migration.** No `UnityEngine.Input`, no `KeyCode`, no `OnMouseXXX` remain.
   This mattered: Unity 6.3 creates projects with Active Input Handling set to Input System
-  only, where the legacy class does not work — `InputKeyPress` did nothing at all in a
-  student's project.
+  only, where the legacy class does not work.
 - **Key components now use inline Input Actions.** `InputKeyPress` and `InputKeyCountdown`
-  expose a binding UI (press +, then Listen) instead of a key dropdown, so the same binding
-  also accepts a gamepad button. Existing scenes need their keys set again.
+  expose a binding UI instead of a key dropdown. Existing scenes need their keys set again.
 - **2D support.** `CharacterController2D`, 2D trigger zones and mouse picking,
-  `PhysicsBumper2D`, `PhysicsForceZone2D`, `PhysicsPlatformStick2D`. `PhysicsBumperTag`
-  merged into `PhysicsBumper` as an optional tag filter and removed.
-- **Six new example scenes**, including one labelled station per input component and a
-  demo of which moving-platform animator pairs with which character controller.
+  `PhysicsBumper2D`, `PhysicsForceZone2D`, `PhysicsPlatformStick2D`.
 
 ## Blocked
 
