@@ -2,7 +2,7 @@
 project: eventGameToolKit
 category: unity
 status: active
-updated: 2026-09-11
+updated: 2026-10-13
 ---
 
 ## Now
@@ -17,11 +17,16 @@ survives.
 ## Next
 
 - Keep receiving syncs from the harness as example-scene coverage is completed
-- Two scenes' worth of work remain in the harness: `PuzzleSequenceChecker` into the existing
-  `puzzleExample`, and a `StopMotionPostProcess` scene using the Mixamo robots
+- One scene remains in the harness: `StopMotionPostProcess` using the Mixamo robots
 - Fix the packaging bug below before anyone installs by git URL again
 
 ## Recently finished
+
+- **Do not push feature work to this repo.** A cloud session committed
+  `CharacterController2D` changes to branch `claude/2d-controller-animator-params` here;
+  they were ported to the harness on 2026-10-13 and arrive on `main` by sync. That branch is
+  now redundant.
+- **`PuzzleSequenceChecker` added to `puzzleExample`**; coverage 72 of 73.
 
 - **Two new example scenes.** `Example3D_DecalAnimation` covers all four DecalAnimation
   components with procedurally generated RGBA decal textures the package owns.
@@ -29,7 +34,7 @@ survives.
   `PhysicsEnemyController` and `CharacterPushRigidBody`.
 - **Label legibility pass across every generated scene** — labels are larger, re-spaced to
   remove collisions, and coloured to contrast with what is behind them.
-- Component coverage is now 71 of 73 (75 scripts; `applicationFPSLimiting` and
+- Component coverage was 71 of 73 (75 scripts; `applicationFPSLimiting` and
   `lockMouseCursorToDisplay` are excluded by decision and will never get example scenes).
 - **Input System migration.** No `UnityEngine.Input`, no `KeyCode`, no `OnMouseXXX` remain.
   This mattered: Unity 6.3 creates projects with Active Input Handling set to Input System
